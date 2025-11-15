@@ -1,0 +1,9 @@
+int n;
+
+void main() {
+    n = 3;
+    do {
+        write("n= ", n);
+        n = n - 1;
+    } while (n > 0);
+}

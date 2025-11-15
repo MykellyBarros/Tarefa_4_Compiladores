@@ -1,0 +1,9 @@
+int a;
+int b;
+
+void main() {
+    a = 1;
+    b = (a = 5) + 2; // a becomes 5, b=7
+    write("a= ", a);
+    write("b= ", b);
+}

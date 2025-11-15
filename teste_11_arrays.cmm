@@ -1,0 +1,20 @@
+int a[5];
+int i;
+int v;
+
+void main() {
+    // init a[i] = i*10
+    i = 0;
+    while (i < 5) {
+        a[i] = i * 10;
+        i = i + 1;
+    }
+    // sum
+    i = 0;
+    v = 0;
+    while (i < 5) {
+        v += a[i];
+        i = i + 1;
+    }
+    write("sum= ", v); // expected 0+10+20+30+40 = 100
+}

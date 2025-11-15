@@ -34,15 +34,22 @@ NL  = \n | \r | \r\n
 
 /* operadores */
 
+"++"   { return Parser.INC; }
+"--"   { return Parser.DEC; }
+"+="   { return Parser.PLUSEQ; }
+
 "+" |
 "-" |
 "*" | 
 "/" | 
 "%" | 
+"." |
 ">" |
 "<" |
 "=" |
 "!" |
+"?" |
+":" |
 ";" |
 "(" | 
 ")" |
@@ -51,6 +58,13 @@ NL  = \n | \r | \r\n
 "," |
 "\[" | 
 "\]"    { return (int) yycharat(0); }
+
+// comments
+"//"[^\n]*    { /* skip line comment */ }
+"/\*"([^*]|\*+[^/])*"\*/" { 
+  // skip block comment and count newlines
+  for (int i=0; i<yylength(); i++) if (yycharat(i) == '\n') yyline++; 
+}
 
 {NUM}  { yyparser.yylval = new ParserVal(yytext()); 
          return Parser.NUM; }
@@ -71,10 +85,15 @@ main   { return Parser.MAIN; }
 write   { return Parser.WRITE; }
 read   { return Parser.READ; }
 while   { return Parser.WHILE; }
+do   { return Parser.DO; }
+for  { return Parser.FOR; }
 if   { return Parser.IF; }
 else   { return Parser.ELSE; }
 true   { return Parser.TRUE; }
 false   { return Parser.FALSE; }
+break  { return Parser.BREAK; }
+continue { return Parser.CONTINUE; }
+struct { return Parser.STRUCT; }
 
 
 

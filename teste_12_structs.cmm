@@ -1,0 +1,12 @@
+struct Ponto { int x; int y; };
+
+struct Ponto p;
+
+void main() {
+    p.x = 10;
+    p.y = 20;
+    write("px= ", p.x);
+    write("py= ", p.y);
+    p.x += p.y;
+    write("px= ", p.x); // 30
+}
