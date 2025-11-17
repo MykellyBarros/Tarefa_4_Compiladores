@@ -1,0 +1,12 @@
+struct P { int x; int y; };
+struct P a[3];
+void main() {
+  a[0].x = 10;
+  a[0].y = 20;
+  a[2].x += 5;
+  a[2].y = a[0].x;
+  write("a0x=", a[0].x);
+  write(" a0y=", a[0].y);
+  write(" a2x=", a[2].x);
+  write(" a2y=", a[2].y);
+}

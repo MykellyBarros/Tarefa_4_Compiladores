@@ -1,8 +1,17 @@
 	
 %{
-  import java.io.*;
-  import java.util.ArrayList;
-  import java.util.Stack;
+	package parser;
+	/*
+	 Resumo: Gramática e geração de código (byacc/j) para .cmm.
+	 Observações:
+	 - Declara tokens, precedências e produções; ações semânticas emitem assembly x86/AT&T.
+	 - Suporta atribuição como expressão, ++/--, +=, ?:, do-while, for, break/continue,
+	   arrays de ints, tipos/variáveis struct, arrays de structs e campos de struct que são arrays.
+	 - Usa `TabSimb` para gerenciamento de símbolos e pilhas de rótulos para controle de fluxo.
+	*/
+	import java.io.*;
+	import java.util.ArrayList;
+	import java.util.Stack;
 %}
  
 
@@ -50,11 +59,16 @@ decl : type ID ';' {  TS_entry nodo = ts.pesquisa($2);
 						   else { TS_entry nodo = ts.pesquisa($3);
 								  if (nodo != null) yyerror("(sem) variavel >"+$3+"< jah declarada");
 								  else ts.insert(new TS_entry($3, $2)); } }
+	  | STRUCT ID ID '[' NUM ']' ';' { if (!ts.hasStructType($2)) yyerror("(sem) struct tipo >"+$2+"< nao definido");
+						   else { TS_entry nodo = ts.pesquisa($3);
+								  if (nodo != null) yyerror("(sem) variavel >"+$3+"< jah declarada");
+								  else ts.insert(new TS_entry($3, $2, Integer.parseInt($5))); } }
 	  ;
 
 // definicao de tipo struct
-sDecl : STRUCT ID '{' { tmpStructFields = new ArrayList<String>(); } sFields '}' ';' { ts.registerStructType($2, tmpStructFields); } ;
-sFields : sFields INT ID ';' { tmpStructFields.add($3); }
+sDecl : STRUCT ID '{' { tmpStructFields = new ArrayList<TabSimb.StructField>(); } sFields '}' ';' { ts.registerStructType($2, tmpStructFields); } ;
+sFields : sFields INT ID ';' { tmpStructFields.add(new TabSimb.StructField($3, 1)); }
+	| sFields INT ID '[' NUM ']' ';' { tmpStructFields.add(new TabSimb.StructField($3, Integer.parseInt($5))); }
 	   | /* vazio */
 	   ;
 
@@ -292,6 +306,73 @@ exp :  NUM  { System.out.println("\tPUSHL $"+$1); }
 								System.out.println("\tMOVL %EAX, (%ECX)");
 								System.out.println("\tPUSHL %EAX");
 							}
+		| ID '[' exp ']' '.' ID {
+						// rvalue a[i].campo para array de structs
+						TS_entry v = ts.pesquisa($1);
+						String st = (v==null)?null:v.getStructName();
+						int sz = (st==null)?4:ts.getStructSize(st);
+						int off = (st==null)?0:ts.getFieldOffsetForType(st, $6);
+						System.out.println("\tPOPL %EAX\t# indice");
+						System.out.println("\tMOVL $"+sz+", %EBX");
+						System.out.println("\tIMULL %EBX, %EAX");
+						System.out.println("\tLEA _"+$1+"+"+off+"(%EAX), %ECX");
+						System.out.println("\tMOVL (%ECX), %EAX");
+						System.out.println("\tPUSHL %EAX");
+					}
+		| ID '[' exp ']' '.' ID '=' exp {
+						TS_entry v = ts.pesquisa($1);
+						String st = (v==null)?null:v.getStructName();
+						int sz = (st==null)?4:ts.getStructSize(st);
+						int off = (st==null)?0:ts.getFieldOffsetForType(st, $6);
+						System.out.println("\tPOPL %EDX\t# valor");
+						System.out.println("\tPOPL %EAX\t# indice");
+						System.out.println("\tMOVL $"+sz+", %EBX");
+						System.out.println("\tIMULL %EBX, %EAX");
+						System.out.println("\tLEA _"+$1+"+"+off+"(%EAX), %ECX");
+						System.out.println("\tMOVL %EDX, (%ECX)");
+						System.out.println("\tPUSHL %EDX");
+					}
+		| ID '[' exp ']' '.' ID PLUSEQ exp {
+						TS_entry v = ts.pesquisa($1);
+						String st = (v==null)?null:v.getStructName();
+						int sz = (st==null)?4:ts.getStructSize(st);
+						int off = (st==null)?0:ts.getFieldOffsetForType(st, $6);
+						System.out.println("\tPOPL %EBX\t# valor");
+						System.out.println("\tPOPL %EAX\t# indice");
+						System.out.println("\tMOVL $"+sz+", %EDX");
+						System.out.println("\tIMULL %EDX, %EAX");
+						System.out.println("\tLEA _"+$1+"+"+off+"(%EAX), %ECX");
+						System.out.println("\tMOVL (%ECX), %EAX");
+						System.out.println("\tADDL %EBX, %EAX");
+						System.out.println("\tMOVL %EAX, (%ECX)");
+						System.out.println("\tPUSHL %EAX");
+					}
+		| ID '.' ID '[' exp ']' {
+						// rvalue var.campo[i] para array dentro da struct
+						int off = ts.getFieldOffsetForVar($1, $3);
+						System.out.println("\tPOPL %EAX\t# indice");
+						System.out.println("\tLEA _"+$1+"+"+off+"(,%EAX,4), %ECX");
+						System.out.println("\tMOVL (%ECX), %EAX");
+						System.out.println("\tPUSHL %EAX");
+					}
+		| ID '.' ID '[' exp ']' '=' exp {
+						int off = ts.getFieldOffsetForVar($1, $3);
+						System.out.println("\tPOPL %EDX\t# valor");
+						System.out.println("\tPOPL %EAX\t# indice");
+						System.out.println("\tLEA _"+$1+"+"+off+"(,%EAX,4), %ECX");
+						System.out.println("\tMOVL %EDX, (%ECX)");
+						System.out.println("\tPUSHL %EDX");
+					}
+		| ID '.' ID '[' exp ']' PLUSEQ exp {
+						int off = ts.getFieldOffsetForVar($1, $3);
+						System.out.println("\tPOPL %EBX\t# valor");
+						System.out.println("\tPOPL %EAX\t# indice");
+						System.out.println("\tLEA _"+$1+"+"+off+"(,%EAX,4), %ECX");
+						System.out.println("\tMOVL (%ECX), %EAX");
+						System.out.println("\tADDL %EBX, %EAX");
+						System.out.println("\tMOVL %EAX, (%ECX)");
+						System.out.println("\tPUSHL %EAX");
+					}
 			| exp '?' {
 								int base = proxRot; proxRot += 2;
 								System.out.println("\tPOPL %EAX");
@@ -349,7 +430,7 @@ optIncr : exp { System.out.println("\tPOPL %EAX\t# descarta incremento do for");
 
   private int strCount = 0;
   private ArrayList<String> strTab = new ArrayList<String>();
-	private ArrayList<String> tmpStructFields; // usado na definicao de tipos struct
+	private ArrayList<TabSimb.StructField> tmpStructFields; // usado na definicao de tipos struct
 
   private Stack<Integer> pRot = new Stack<Integer>();
   private int proxRot = 1;

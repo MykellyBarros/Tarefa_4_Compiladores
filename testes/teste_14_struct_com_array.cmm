@@ -1,0 +1,10 @@
+struct V { int v[4]; int z; };
+struct V s;
+void main() {
+  s.v[1] = 7;
+  s.v[3] += 2;
+  s.z = s.v[1] + s.v[3];
+  write("v1=", s.v[1]);
+  write(" v3=", s.v[3]);
+  write(" z=", s.z);
+}

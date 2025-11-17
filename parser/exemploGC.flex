@@ -1,6 +1,18 @@
+/*
+ Resumo: Especificação JFlex para o analisador léxico da linguagem .cmm.
+ Observações:
+ - Define tokens para identificadores, literais, operadores, pontuação e palavras-chave.
+ - Ignora espaços em branco e comentários de linha e bloco; contabiliza linhas para relatório de erros.
+ - Integra com byacc/j (`Parser`) usando %byaccj.
+*/
+
 %%
 
 %byaccj
+%class Yylex
+%unicode
+%line
+%type int
 
 %{
   private Parser yyparser;
@@ -11,15 +23,13 @@
     yyline = 1;
   }
 
-
   public int getLine() {
-      return yyline;
+    return yyline;
   }
-
 %}
 
 NUM = [0-9]+
-NL  = \n | \r | \r\n
+NL  = (\r\n|\r|\n)
 
 %%
 
@@ -77,23 +87,23 @@ NL  = \n | \r | \r\n
 "&&"   { return Parser.AND; }
 "||"   {  return Parser.OR; }
 
-int    { return Parser.INT;     }
-float  { return Parser.FLOAT;   }
-bool   { return Parser.BOOL; }
-void   { return Parser.VOID; }
-main   { return Parser.MAIN; }
-write   { return Parser.WRITE; }
-read   { return Parser.READ; }
-while   { return Parser.WHILE; }
-do   { return Parser.DO; }
-for  { return Parser.FOR; }
-if   { return Parser.IF; }
-else   { return Parser.ELSE; }
-true   { return Parser.TRUE; }
-false   { return Parser.FALSE; }
-break  { return Parser.BREAK; }
+int      { return Parser.INT; }
+float    { return Parser.FLOAT; }
+bool     { return Parser.BOOL; }
+void     { return Parser.VOID; }
+main     { return Parser.MAIN; }
+write    { return Parser.WRITE; }
+read     { return Parser.READ; }
+while    { return Parser.WHILE; }
+do       { return Parser.DO; }
+for      { return Parser.FOR; }
+if       { return Parser.IF; }
+else     { return Parser.ELSE; }
+true     { return Parser.TRUE; }
+false    { return Parser.FALSE; }
+break    { return Parser.BREAK; }
 continue { return Parser.CONTINUE; }
-struct { return Parser.STRUCT; }
+struct   { return Parser.STRUCT; }
 
 
 
